@@ -1,0 +1,6 @@
+[submodule "micro-ecc"]
+	path = micro-ecc
+	url = git@github.com:LieBtrau/micro-ecc.git
+[submodule "AES-CMAC-RFC"]
+	path = AES-CMAC-RFC
+	url = git@github.com:LieBtrau/AES-CMAC-RFC.git
