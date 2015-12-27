@@ -5,8 +5,8 @@
 #include <types.h>
 #include <uECC_vli.h>
 
-NfcSec01 unit1;
-NfcSec01 unit2;
+NfcSec01 unit1(true);
+NfcSec01 unit2(false);
 
 void setup() {
   // put your setup code here, to run once:
@@ -98,7 +98,7 @@ bool testMasterKeySse() {
   unit2.setNFCIDi(NFCID3_2,NfcSec01::NFCID_SIZE);
 
   //Generate master key on unit 1:
-  if (!unit1.calcMasterKeySSE(public2, nonce2, NFCID3_2, true)) {
+  if (!unit1.calcMasterKeySSE(public2, nonce2, NFCID3_2)) {
     Serial.println("Can't calculate master key1");
     return false;
   }
@@ -106,7 +106,7 @@ bool testMasterKeySse() {
   printBuffer("MKsse1", MKsse1, BLOCK_SIZE);
 
   //Generate master key on unit 2:
-  if (!unit2.calcMasterKeySSE(public1, nonce1, NFCID3_1, false)) {
+  if (!unit2.calcMasterKeySSE(public1, nonce1, NFCID3_1)) {
     Serial.println("Can't calculate master key2");
     return false;
   }
@@ -121,14 +121,14 @@ bool testMasterKeySse() {
   Serial.println("Master keys are equal: OK");
 
   //Key confirmation 1
-  unit1.generateKeyConfirmationTag(public2, NFCID3_2, macTag1, true);
+  unit1.generateKeyConfirmationTag(public2, NFCID3_2, macTag1);
   printBuffer("macTag1", macTag1, 12);
 
   //Key confirmation 2
-  unit2.generateKeyConfirmationTag(public1, NFCID3_1, macTag2, false);
+  unit2.generateKeyConfirmationTag(public1, NFCID3_1, macTag2);
   printBuffer("macTag2", macTag2, 12);
   //Check if key confirmation succeeds
-  if (!unit1.checkKeyConfirmation(macTag2, macTag1)) {
+  if (!unit1.checkKeyConfirmation(macTag2)) {
     Serial.println("Key confirmation fails");
     return false;
   }
