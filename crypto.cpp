@@ -1,9 +1,38 @@
 #include "crypto.h"
 
-extern "C" { static int RNG(uint8_t *dest, unsigned size);}
 
-NfcSec01::NfcSec01(bool bIsInitiator):_bIsInitiator(bIsInitiator)
+NfcSec01::NfcSec01(bool bIsInitiator):_bIsInitiator(bIsInitiator){}
+
+bool NfcSec01::generateAsymmetricKey(uECC_RNG_Function rng_function)
 {
+    uECC_set_rng(rng_function);
+    const struct uECC_Curve_t * curve = uECC_secp192r1();
+    return uECC_make_key(_localPublicKey, _localPrivateKey, curve)!=0;
+}
+
+void NfcSec01::generateRandomNFCIDi(uECC_RNG_Function rng_function)
+{
+    rng_function(_localNFCID3,NFCID_SIZE);
+}
+
+void NfcSec01::generateRandomNonce(uECC_RNG_Function rng_function)
+{
+    rng_function(_localNonce, _96BIT_);
+}
+
+
+byte NfcSec01::getPublicKeySize()
+{
+    return _192BIT_*2;
+}
+
+byte NfcSec01::getPrivateKeySize()
+{
+    return _192BIT_;
+}
+
+byte NfcSec01::getNonceSize(){
+    return _96BIT_;
 }
 
 bool NfcSec01::setLocalKey(const byte *pLocalPrivateKey, const byte *pLocalPublicKey)
@@ -24,13 +53,14 @@ void NfcSec01::setNFCIDi(const byte* nfcid3i, byte length)
     memcpy(_localNFCID3,nfcid3i,min(NFCID_SIZE,length));
 }
 
-byte* NfcSec01::getLocalNonce(bool bGenerateNew)
+void NfcSec01::getLocalNonce(byte* nonce)
 {
-    if(bGenerateNew)
-    {
-        RNG(_localNonce, _96BIT_);
-    }
-    return _localNonce;
+   memcpy(nonce, _localNonce, _96BIT_);
+}
+
+void NfcSec01::getPublicKey(byte* key)
+{
+    memcpy(key, _localPublicKey, _192BIT_*2);
 }
 
 void NfcSec01::getMasterKey(byte* key)
@@ -90,36 +120,3 @@ bool NfcSec01::calcMasterKeySSE(const byte* pRemotePublicKey, const byte* pRemot
     AES_CMAC(SKEYSEED, S, sizeof(S), _MKsse);
     return true;
 }
-
-extern "C" {
-
-//TODO: replace by safe external RNG
-static int RNG(uint8_t *dest, unsigned size) {
-    // Use the least-significant bits from the ADC for an unconnected pin (or connected to a source of
-    // random noise). This can take a long time to generate random data if the result of analogRead(0)
-    // doesn't change very frequently.
-    while (size) {
-        uint8_t val = 0;
-        for (unsigned i = 0; i < 8; ++i) {
-            int init = analogRead(0);
-            int count = 0;
-            while (analogRead(0) == init) {
-                ++count;
-            }
-
-            if (count == 0) {
-                val = (val << 1) | (init & 0x01);
-            } else {
-                val = (val << 1) | (count & 0x01);
-            }
-        }
-        *dest = val;
-        ++dest;
-        --size;
-    }
-    // NOTE: it would be a good idea to hash the resulting random data using SHA-256 or similar.
-    return 1;
-}
-
-}  // extern "C"
-

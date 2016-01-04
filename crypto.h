@@ -8,8 +8,15 @@ class NfcSec01
 {
 public:
     NfcSec01(bool bIsInitiator);
+    static byte getPublicKeySize();
+    static byte getPrivateKeySize();
+    static byte getNonceSize();
+    bool generateAsymmetricKey(uECC_RNG_Function rng_function);
+    void generateRandomNFCIDi(uECC_RNG_Function rng_function);
+    void generateRandomNonce(uECC_RNG_Function rng_function);
     void generateKeyConfirmationTag(const byte* pRemotePublicKey, const byte* pRemoteNFCID3, byte* KeyConfirmationTag);
-    byte* getLocalNonce(bool bGenerateNew);
+    void getLocalNonce(byte* nonce);
+    void getPublicKey(byte* key);
     void getMasterKey(byte *key);
     void setLocalNonce(const byte* localNonce);
     void setNFCIDi(const byte* nfcid3i, byte length);
@@ -23,6 +30,11 @@ public:
     static const byte _96BIT_ = 12;
     static const byte _128BIT_ = 16;
     static const byte _192BIT_ = 24;
+    typedef enum
+    {
+        QA_AND_NA,
+        QB_AND_NB
+    }MSG_ID;
 private:
     void printBuffer(const char *name, const byte* buf, byte len);
     byte _localPrivateKey[_192BIT_];
