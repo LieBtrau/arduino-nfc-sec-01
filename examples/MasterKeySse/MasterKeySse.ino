@@ -5,13 +5,16 @@
 #include <types.h>
 #include <uECC_vli.h>
 
-NfcSec01 unit1(true);
-NfcSec01 unit2(false);
+NfcSec01 unitA(true);
+NfcSec01 unitB(false);
+bool testMasterKeySse();
 
 void setup() {
   // put your setup code here, to run once:
   Serial.begin(9600);
-  testMasterKeySse();
+  if(testMasterKeySse()){
+    Serial.println("Pairing successful");
+  }
 }
 
 void loop() {
@@ -19,116 +22,118 @@ void loop() {
 
 }
 
-extern "C" {
 
-  //TODO: replace by safe external RNG
-  static int RNG(uint8_t *dest, unsigned size) {
-    // Use the least-significant bits from the ADC for an unconnected pin (or connected to a source of
-    // random noise). This can take a long time to generate random data if the result of analogRead(0)
-    // doesn't change very frequently.
-    while (size) {
-      uint8_t val = 0;
-      for (unsigned i = 0; i < 8; ++i) {
-        int init = analogRead(0);
-        int count = 0;
-        while (analogRead(0) == init) {
-          ++count;
-        }
-
-        if (count == 0) {
-          val = (val << 1) | (init & 0x01);
-        } else {
-          val = (val << 1) | (count & 0x01);
-        }
+//TODO: replace by safe external RNG
+static int RNG(uint8_t *dest, unsigned size) {
+  // Use the least-significant bits from the ADC for an unconnected pin (or connected to a source of
+  // random noise). This can take a long time to generate random data if the result of analogRead(0)
+  // doesn't change very frequently.
+  while (size) {
+    uint8_t val = 0;
+    for (unsigned i = 0; i < 8; ++i) {
+      int init = analogRead(0);
+      int count = 0;
+      while (analogRead(0) == init) {
+        ++count;
       }
-      *dest = val;
-      ++dest;
-      --size;
-    }
-    // NOTE: it would be a good idea to hash the resulting random data using SHA-256 or similar.
-    return 1;
-  }
 
-}  // extern "C"
+      if (count == 0) {
+        val = (val << 1) | (init & 0x01);
+      } else {
+        val = (val << 1) | (count & 0x01);
+      }
+    }
+    *dest = val;
+    ++dest;
+    --size;
+  }
+  // NOTE: it would be a good idea to hash the resulting random data using SHA-B56 or similar.
+  return 1;
+}
+
 
 bool testMasterKeySse() {
-  const byte uECC_BYTES = 24;
-  const struct uECC_Curve_t * curve = uECC_secp192r1();
-  byte private1[uECC_BYTES];
-  byte public1[uECC_BYTES * 2];
-  byte nonce1[BLOCK_SIZE / 2];
-  byte NFCID3_1[NfcSec01::NFCID_SIZE];
-  byte MKsse1[BLOCK_SIZE];
-  byte macTag1[BLOCK_SIZE];
+  byte publicA[unitA.getPublicKeySize()];
+  byte nonceA[unitA.getNonceSize()];
+  byte NFCID3_A[NfcSec01::NFCID_SIZE];
+  byte MKsseA[unitA.getMasterKeySize()];
+  byte macTagA[unitA.getMacTagSize()];
 
-  byte private2[uECC_BYTES];
-  byte public2[uECC_BYTES * 2];
-  byte nonce2[BLOCK_SIZE / 2];
-  byte NFCID3_2[NfcSec01::NFCID_SIZE];
-  byte MKsse2[BLOCK_SIZE];
-  byte macTag2[BLOCK_SIZE];
+  byte publicB[unitB.getPublicKeySize()];
+  byte nonceB[unitB.getNonceSize()];
+  byte NFCID3_B[NfcSec01::NFCID_SIZE];
+  byte MKsseB[unitB.getMasterKeySize()];
+  byte macTagB[unitB.getMacTagSize()];
 
-  uECC_set_rng(&RNG);
 
   Serial.println();
-  //Initialize unit 1
-  Serial.println("Data of unit 1:");
-  uECC_make_key(public1, private1, curve);
-  RNG(nonce1, 8);
-  RNG(NFCID3_1, NfcSec01::NFCID_SIZE);//Should be read from the NFC-tag
-  printBuffer("Public1", public1, 2 * uECC_BYTES);
-  printBuffer("Private1", private1, uECC_BYTES);
-  printBuffer("nonce1", nonce1, 8);
-  printBuffer("NFCID3_1", NFCID3_1, NfcSec01::NFCID_SIZE);
-  unit1.setLocalKey(private1, public1);
-  unit1.setLocalNonce(nonce1);
-  unit1.setNFCIDi(NFCID3_1,NfcSec01::NFCID_SIZE);
+  //Initialize unit A
+  Serial.println("Data of unit A:");
+  //Key
+  unitA.generateAsymmetricKey(&RNG);
+  unitA.getPublicKey(publicA);
+  printBuffer("PublicA", publicA, unitA.getPublicKeySize());
+  //Nonce
+  unitA.generateRandomNonce(&RNG);
+  unitA.getLocalNonce(nonceA);
+  printBuffer("NonceA", nonceA, unitA.getNonceSize());
+  //NFCID3
+  RNG(NFCID3_A, NfcSec01::NFCID_SIZE); //Should be read from the NFC-tag
+  unitA.setNFCIDi(NFCID3_A, NfcSec01::NFCID_SIZE);
+  printBuffer("NFCID3_A", NFCID3_A, NfcSec01::NFCID_SIZE);
 
-  //Initialize unit 2
-  uECC_make_key(public2, private2, curve);
-  RNG(nonce2, 8);
-  RNG(NFCID3_2, NfcSec01::NFCID_SIZE);
-  Serial.println("Data of unit 2:");
-  printBuffer("Public2", public2, 2 * uECC_BYTES);
-  printBuffer("Private2", private2, uECC_BYTES);
-  printBuffer("nonce2", nonce2, 8);
-  printBuffer("NFCID3_2", NFCID3_2, NfcSec01::NFCID_SIZE);
-  unit2.setLocalKey(private2, public2);
-  unit2.setLocalNonce(nonce2);
-  unit2.setNFCIDi(NFCID3_2,NfcSec01::NFCID_SIZE);
+  //Initialize unit B
+  Serial.println("Data of unit B:");
+  //Key
+  unitB.generateAsymmetricKey(&RNG);
+  unitB.getPublicKey(publicB);
+  printBuffer("PublicB", publicB, unitA.getPublicKeySize());
+  //Nonce
+  unitB.generateRandomNonce(&RNG);
+  unitB.getLocalNonce(nonceB);
+  printBuffer("NonceB", nonceB, unitB.getNonceSize());
+  //NFCID3
+  RNG(NFCID3_B, NfcSec01::NFCID_SIZE);
+  unitB.setNFCIDi(NFCID3_B, NfcSec01::NFCID_SIZE);
+  printBuffer("NFCID3_B", NFCID3_B, NfcSec01::NFCID_SIZE);
 
-  //Generate master key on unit 1:
-  if (!unit1.calcMasterKeySSE(public2, nonce2, NFCID3_2)) {
-    Serial.println("Can't calculate master key1");
+  //Generate master key on unit A:
+  if (!unitA.calcMasterKeySSE(publicB, nonceB, NFCID3_B, NfcSec01::NFCID_SIZE)) {
+    Serial.println("Can't calculate master keyA");
     return false;
   }
-  unit1.getMasterKey(MKsse1);
-  printBuffer("MKsse1", MKsse1, BLOCK_SIZE);
+  unitA.getMasterKey(MKsseA);
+  printBuffer("MKsseA", MKsseA, unitA.getMasterKeySize());
 
-  //Generate master key on unit 2:
-  if (!unit2.calcMasterKeySSE(public1, nonce1, NFCID3_1)) {
-    Serial.println("Can't calculate master key2");
+  //Generate master key on unit B:
+  if (!unitB.calcMasterKeySSE(publicA, nonceA, NFCID3_A, NfcSec01::NFCID_SIZE)) {
+    Serial.println("Can't calculate master keyB");
     return false;
   }
-  unit2.getMasterKey(MKsse2);
-  printBuffer("MKsse2", MKsse2, BLOCK_SIZE);
+  unitB.getMasterKey(MKsseB);
+  printBuffer("MKsseB", MKsseB, unitB.getMasterKeySize());
 
-  //Check if master keys are equal
-  if (memcmp(MKsse1, MKsse2, BLOCK_SIZE)) {
+  if(memcmp(MKsseA,MKsseB,unitA.getMasterKeySize())!=0){
     Serial.println("Master keys are not equal");
     return false;
   }
-  Serial.println("Master keys are equal: OK");
 
-  //Key confirmation 1
-  unit1.generateKeyConfirmationTag(public2, NFCID3_2, macTag1);
-  printBuffer("macTag1", macTag1, 12);
+  //Generate key confirmation tag on unit A = MacTagA
+  unitA.generateKeyConfirmationTag(macTagA);
+  printBuffer("macTagA", macTagA, unitA.getMacTagSize());
 
-  //Key confirmation 2
-  unit2.generateKeyConfirmationTag(public1, NFCID3_1, macTag2);
-  printBuffer("macTag2", macTag2, 12);
-  //Check if key confirmation succeeds
-  if (!unit1.checkKeyConfirmation(macTag2)) {
+  //Unit B checks MacTagA
+  if (!unitB.checkKeyConfirmation(macTagA)) {
+    Serial.println("Key confirmation fails");
+    return false;
+  }
+
+  //Generate key confirmation tag on unit B = MacTagB
+  unitB.generateKeyConfirmationTag(macTagB);
+  printBuffer("macTagB", macTagB, unitB.getMacTagSize());
+
+  //Unit A checks MacTagB
+  if (!unitA.checkKeyConfirmation(macTagB)) {
     Serial.println("Key confirmation fails");
     return false;
   }
