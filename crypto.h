@@ -8,21 +8,23 @@ class NfcSec01
 {
 public:
     NfcSec01(bool bIsInitiator);
+    NfcSec01();
     static byte getPublicKeySize();
     static byte getPrivateKeySize();
     static byte getNonceSize();
     static byte getMacTagSize();
     static byte getMasterKeySize();
-    bool generateAsymmetricKey(uECC_RNG_Function rng_function);
-    void generateRandomNonce(uECC_RNG_Function rng_function);
-    void generateKeyConfirmationTag(byte* KeyConfirmationTag);
     void getLocalNonce(byte* nonce);
-    void setLocalNonce(const byte* localNonce);
     void getPublicKey(byte* key);
     bool setLocalKey(const byte* pLocalPrivateKey, const byte* pLocalPublicKey);
     void getMasterKey(byte *key);
     void setNFCIDi(const byte* nfcid3i, byte length);
-    bool calcMasterKeySSE(const byte* pRemotePublicKey, const byte* pRemoteNonce, const byte* pRemoteNFCID3, byte nfcid3Length);
+    void setRemotePublicKey(const byte* key);
+    void setInitiator(bool bIsInitiator);
+    bool generateAsymmetricKey(uECC_RNG_Function rng_function);
+    void generateRandomNonce(uECC_RNG_Function rng_function);
+    void generateKeyConfirmationTag(byte* KeyConfirmationTag);
+    bool calcMasterKeySSE(const byte* pRemoteNonce, const byte* pRemoteNFCID3, byte nfcid3Length);
     bool checkKeyConfirmation(const byte* pRemoteMacTag);
     void testEcc();
     bool testMasterKeySse();
@@ -33,8 +35,10 @@ public:
     static const byte _192BIT_ = 24;
     typedef enum
     {
-        QA_AND_NA,
-        QB_AND_NB,
+        QA,
+        QB,
+        NA,
+        NB,
         MAC_TAG_A,
         MAC_TAG_B
     }MSG_ID;

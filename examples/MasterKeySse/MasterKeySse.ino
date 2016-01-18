@@ -11,7 +11,7 @@ bool testMasterKeySse();
 
 void setup() {
   // put your setup code here, to run once:
-  Serial.begin(9600);
+  Serial.begin(115200);
   if(testMasterKeySse()){
     Serial.println("Pairing successful");
   }
@@ -98,7 +98,8 @@ bool testMasterKeySse() {
   printBuffer("NFCID3_B", NFCID3_B, NfcSec01::NFCID_SIZE);
 
   //Generate master key on unit A:
-  if (!unitA.calcMasterKeySSE(publicB, nonceB, NFCID3_B, NfcSec01::NFCID_SIZE)) {
+  unitA.setRemotePublicKey(publicB);
+  if (!unitA.calcMasterKeySSE(nonceB, NFCID3_B, NfcSec01::NFCID_SIZE)) {
     Serial.println("Can't calculate master keyA");
     return false;
   }
@@ -106,7 +107,8 @@ bool testMasterKeySse() {
   printBuffer("MKsseA", MKsseA, unitA.getMasterKeySize());
 
   //Generate master key on unit B:
-  if (!unitB.calcMasterKeySSE(publicA, nonceA, NFCID3_A, NfcSec01::NFCID_SIZE)) {
+  unitB.setRemotePublicKey(publicA);
+  if (!unitB.calcMasterKeySSE(nonceA, NFCID3_A, NfcSec01::NFCID_SIZE)) {
     Serial.println("Can't calculate master keyB");
     return false;
   }
