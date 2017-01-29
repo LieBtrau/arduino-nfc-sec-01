@@ -1,9 +1,5 @@
 #include <crypto.h>
-#include <cmac.h>
-#include <TI_aes_128.h>
-#include <uECC.h>
-#include <types.h>
-#include <uECC_vli.h>
+
 
 NfcSec01 unitA(true);
 NfcSec01 unitB(false);
