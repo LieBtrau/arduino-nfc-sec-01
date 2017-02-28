@@ -14,17 +14,19 @@ public:
     static byte getNonceSize();
     static byte getMacTagSize();
     static byte getMasterKeySize();
+    static byte getNfcidSize();
     void getLocalNonce(byte* nonce);
     void getPublicKey(byte* key);
     bool setLocalKey(const byte* pLocalPrivateKey, const byte* pLocalPublicKey);
     void getMasterKey(byte *key);
+    void getNFCIDi(byte* nfcid3i);
     void setNFCIDi(const byte* nfcid3i, byte length);
-    void setRemotePublicKey(const byte* key);
+    bool setRemotePublicKey(const byte* key);
     void setInitiator(bool bIsInitiator);
     bool generateAsymmetricKey(uECC_RNG_Function rng_function);
     void generateRandomNonce(uECC_RNG_Function rng_function);
     void generateKeyConfirmationTag(byte* KeyConfirmationTag);
-    bool calcMasterKeySSE(const byte* pRemoteNonce, const byte* pRemoteNFCID3, byte nfcid3Length);
+    bool calcMasterKeySSE(const byte* pRemoteNonce, const byte* pRemoteNFCID3);
     bool checkKeyConfirmation(const byte* pRemoteMacTag);
     void testEcc();
     bool testMasterKeySse();
@@ -53,6 +55,7 @@ private:
     byte _MKsse[_128BIT_];
     byte _KeyConfirmationTag[_96BIT_];
     bool _bIsInitiator;
+    const struct uECC_Curve_t * _curve;
 };
 
 #endif // CRYPTO_H
