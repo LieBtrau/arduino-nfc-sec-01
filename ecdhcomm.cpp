@@ -19,7 +19,7 @@ EcdhComm::~EcdhComm()
 
 bool EcdhComm::init(const byte* localId, byte idLength)
 {
-    _messageBuffer=(byte*)malloc(255);
+    _messageBuffer=(byte*)malloc(MAX_MESSAGE_LEN);
     if(!_messageBuffer)
     {
 #ifdef DEBUG
@@ -35,73 +35,101 @@ bool EcdhComm::init(const byte* localId, byte idLength)
         return false;
 #endif
     }
-    _state=WAITING_FOR_NONCE_A;
+    _state=WAITING_FOR_PUBKEY_A;
     return true;
 }
 
 EcdhComm::AUTHENTICATION_RESULT EcdhComm::loop()
 {
     byte messageLength;
-
+    AUTHENTICATION_RESULT retVal=NO_AUTHENTICATION;
     if(millis()>_commTimeOut+10000)
     {
 #ifdef DEBUG
         Serial.println("Timeout");
 #endif
-        _state=WAITING_FOR_NONCE_A;
+        _commTimeOut=millis();
+    }
+    else
+    {
+        messageLength=MAX_MESSAGE_LEN;
+        if(!_rxfunc(&_messageBuffer, messageLength) || !messageLength)
+        {
+#ifdef DEBUG
+            // Serial.println("No message ready.");
+#endif
+            if(!messageLength)
+            {
+#ifdef DEBUG
+                Serial.println("Empty message.");
+#endif
+            }
+            return _state==WAITING_FOR_PUBKEY_A ? NO_AUTHENTICATION: AUTHENTICATION_BUSY;
+        }
+#ifdef DEBUG
+        Serial.println("Received something!");
+#endif
+        switch(_state)
+        {
+        case WAITING_FOR_PUBKEY_A:
+            if(parsePubKey(false) && sendPubKey(false))
+            {
+                _state=WAITING_FOR_NONCE_A;
+                _commTimeOut=millis();
+                retVal= AUTHENTICATION_BUSY;
+            }
+            break;
+        case WAITING_FOR_PUBKEY_B:
+            if(parsePubKey(true) && sendNonce(true))
+            {
+                _state=WAITING_FOR_NONCE_B;
+                retVal= AUTHENTICATION_BUSY;
+            }
+            break;
+        case WAITING_FOR_NONCE_A:
+            if(parseNonce(false) && sendNonce(false))
+            {
+                _state=WAITING_FOR_MACTAG_A;
+                retVal= AUTHENTICATION_BUSY;
+            }
+            break;
+        case WAITING_FOR_NONCE_B:
+            if(parseNonce(true) && sendMacTag(true))
+            {
+                _state=WAITING_FOR_MACTAG_B;
+                retVal= AUTHENTICATION_BUSY;
+            }
+            break;
+        case WAITING_FOR_MACTAG_A:
+            if(parseMacTag(false) && sendMacTag(false))
+            {
+                retVal= AUTHENTICATION_OK;
+            }
+            break;
+        case WAITING_FOR_MACTAG_B:
+            if(parseMacTag(true))
+            {
+                retVal= AUTHENTICATION_OK;
+            }
+            break;
+        }
+    }
+    if(retVal!=AUTHENTICATION_BUSY)
+    {
+        _state=WAITING_FOR_PUBKEY_A;
         _nfcsec.setInitiator(false);
-        _commTimeOut=millis();
     }
-    messageLength=255;
-    if(!_rxfunc(&_messageBuffer, messageLength) || !messageLength)
-    {
-#ifdef DEBUG
-        // Serial.println("No message ready.");
-#endif
-        if(!messageLength)
-        {
-#ifdef DEBUG
-            Serial.println("Empty message.");
-#endif
-        }
-        return _state==WAITING_FOR_NONCE_A ? NO_AUTHENTICATION: AUTHENTICATION_BUSY;
-    }
-#ifdef DEBUG
-    Serial.println("Received something!");
-#endif
-    switch(_state)
-    {
-    case WAITING_FOR_NONCE_A:
-        if((!parseNonce(false)) || (!sendNonce(false)))
-        {
-            return NO_AUTHENTICATION;
-        }
-        _state=WAITING_FOR_MACTAG_A;
-        _commTimeOut=millis();
-        return AUTHENTICATION_BUSY;
-    case WAITING_FOR_NONCE_B:
-        if((!parseNonce(true)) || (!sendMacTag(true)))
-        {
-            return NO_AUTHENTICATION;
-        }
-        _state=WAITING_FOR_MACTAG_B;
-        return AUTHENTICATION_BUSY;
-    case WAITING_FOR_MACTAG_A:
-        _state=WAITING_FOR_NONCE_A;
-        return (parseMacTag(false) && sendMacTag(false)) ? AUTHENTICATION_OK : NO_AUTHENTICATION;
-    case WAITING_FOR_MACTAG_B:
-        _state=WAITING_FOR_NONCE_A;
-        return parseMacTag(true) ? AUTHENTICATION_OK : NO_AUTHENTICATION;
-    }
+    return retVal;
 }
 
 bool EcdhComm::startPairing()
 {
-    if(!sendNonce(true))
+    if(!sendPubKey(true))
     {
         return false;
     }
-    _state=WAITING_FOR_NONCE_B;
+    _state=WAITING_FOR_PUBKEY_B;
+    _commTimeOut=millis();
     return true;
 }
 
@@ -145,16 +173,13 @@ bool EcdhComm::sendMacTag(bool isInitiator)
 }
 
 
-// TAG | ID | PUBKEY | NONCE
+// TAG | ID | NONCE
 bool EcdhComm::sendNonce(bool isInitiator)
 {
-    _nfcsec.setInitiator(isInitiator);
     *_messageBuffer= isInitiator ? NONCE_A : NONCE_B;
     byte* ptr=_messageBuffer+1;
     _nfcsec.getNFCIDi(ptr);
     ptr+=_nfcsec.getNfcidSize();
-    _nfcsec.getPublicKey(ptr);
-    ptr+=_nfcsec.getPublicKeySize();
     if(isInitiator)
     {
         _nfcsec.generateRandomNonce(_rng_function);
@@ -165,11 +190,10 @@ bool EcdhComm::sendNonce(bool isInitiator)
     if(!_txfunc(_messageBuffer,ptr-_messageBuffer))
     {
 #ifdef DEBUG
-        Serial.println("Can't send initiator message.");
+        Serial.println("Can't send nonce.");
 #endif
         return false;
     }
-    _commTimeOut=millis();
     return true;
 }
 
@@ -182,12 +206,11 @@ bool EcdhComm::parseNonce(bool isInitiator)
 #endif
         return false;
     }
-    _nfcsec.setRemotePublicKey(_messageBuffer+1+_nfcsec.getNfcidSize());
     if(!isInitiator)
     {
         _nfcsec.generateRandomNonce(_rng_function);
     }
-    bool bResult= _nfcsec.calcMasterKeySSE(_messageBuffer+1+_nfcsec.getNfcidSize()+_nfcsec.getPublicKeySize(), _messageBuffer+1);
+    bool bResult= _nfcsec.calcMasterKeySSE(_messageBuffer+1+_nfcsec.getNfcidSize(), _messageBuffer+1);
     if(!bResult)
     {
 #ifdef DEBUG
@@ -196,3 +219,35 @@ bool EcdhComm::parseNonce(bool isInitiator)
     }
     return bResult;
 }
+
+bool EcdhComm::sendPubKey(bool isInitiator)
+{
+    _nfcsec.setInitiator(isInitiator);
+    *_messageBuffer= isInitiator ? PUBKEY_A : PUBKEY_B;
+    byte* ptr=_messageBuffer+1;
+    _nfcsec.getPublicKey(ptr);
+    ptr+=_nfcsec.getPublicKeySize();
+    if(!_txfunc(_messageBuffer,ptr-_messageBuffer))
+    {
+#ifdef DEBUG
+        Serial.println("Can't send pubkey");
+#endif
+        return false;
+    }
+    return true;
+}
+
+bool EcdhComm::parsePubKey(bool isInitiator)
+{
+    if(*_messageBuffer!=(isInitiator ? PUBKEY_B : PUBKEY_A))
+    {
+#ifdef DEBUG
+        Serial.println("Message is not PUBKEY_x.");
+#endif
+        return false;
+    }
+    _nfcsec.setRemotePublicKey(_messageBuffer+1);
+    return true;
+}
+
+

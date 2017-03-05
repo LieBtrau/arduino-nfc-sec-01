@@ -25,6 +25,8 @@ public:
 private:
     typedef enum
     {
+        PUBKEY_A,
+        PUBKEY_B,
         NONCE_A,
         NONCE_B,
         MACTAG_A,
@@ -33,17 +35,22 @@ private:
     typedef enum
     {
         NOT_STARTED,
+        WAITING_FOR_PUBKEY_A,
+        WAITING_FOR_PUBKEY_B,
         WAITING_FOR_NONCE_A,
         WAITING_FOR_NONCE_B,
         WAITING_FOR_MACTAG_A,
         WAITING_FOR_MACTAG_B
     }AUTHENTICATION_STATE;
+    bool sendPubKey(bool isInitiator);
+    bool parsePubKey(bool isInitiator);
     bool sendNonce(bool isInitiator);
     bool parseNonce(bool isInitiator);
     bool sendMacTag(bool isInitiator);
     bool parseMacTag(bool isInitiator);
     void setLocalId(const byte* localId, byte idLength);
     static const byte NONCE_LENGTH=8;
+    static const byte MAX_MESSAGE_LEN=60; //maximum length for RH_SERIAL
     RNG_Function _rng_function;
     TX_Function _txfunc;
     RX_Function _rxfunc;
