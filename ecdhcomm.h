@@ -22,6 +22,7 @@ public:
     bool init(const byte* localId, byte idLength);
     AUTHENTICATION_RESULT loop();
     bool startPairing();
+    byte* getMasterKey();
 private:
     typedef enum
     {

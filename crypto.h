@@ -18,7 +18,7 @@ public:
     void getLocalNonce(byte* nonce);
     void getPublicKey(byte* key);
     bool setLocalKey(const byte* pLocalPrivateKey, const byte* pLocalPublicKey);
-    void getMasterKey(byte *key);
+    byte *getMasterKey();
     void getNFCIDi(byte* nfcid3i);
     void setNFCIDi(const byte* nfcid3i, byte length);
     bool setRemotePublicKey(const byte* key);

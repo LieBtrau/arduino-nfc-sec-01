@@ -1,5 +1,5 @@
 #include "ecdhcomm.h"
-#define DEBUG
+//#define DEBUG
 
 EcdhComm::EcdhComm(RNG_Function rng_function, TX_Function tx_func, RX_Function rx_func):
     _rng_function(rng_function),
@@ -157,6 +157,11 @@ bool EcdhComm::parseMacTag(bool isInitiator)
     return bResult;
 }
 
+byte *EcdhComm::getMasterKey()
+{
+    return _nfcsec.getMasterKey();
+}
+
 // TAG | MACTAG
 bool EcdhComm::sendMacTag(bool isInitiator)
 {
@@ -249,5 +254,4 @@ bool EcdhComm::parsePubKey(bool isInitiator)
     _nfcsec.setRemotePublicKey(_messageBuffer+1);
     return true;
 }
-
 

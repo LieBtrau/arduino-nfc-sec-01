@@ -1,6 +1,6 @@
 #include "crypto.h"
 
-#define DEBUG
+//#define DEBUG
 
 NfcSec01::NfcSec01():
     _bIsInitiator(false)
@@ -81,9 +81,9 @@ void NfcSec01::getPublicKey(byte* key)
     memcpy(key, _localPublicKey, _192BIT_*2);
 }
 
-void NfcSec01::getMasterKey(byte* key)
+byte* NfcSec01::getMasterKey()
 {
-    memcpy(key, _MKsse, _128BIT_);
+    return _MKsse;
 }
 
 bool NfcSec01::setRemotePublicKey(const byte* key)
