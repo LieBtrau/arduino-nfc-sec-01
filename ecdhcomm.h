@@ -23,6 +23,7 @@ public:
     AUTHENTICATION_RESULT loop();
     bool startPairing();
     byte* getMasterKey();
+    byte* getRemoteId();
 private:
     typedef enum
     {

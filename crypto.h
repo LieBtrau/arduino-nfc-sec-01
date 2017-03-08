@@ -20,6 +20,7 @@ public:
     bool setLocalKey(const byte* pLocalPrivateKey, const byte* pLocalPublicKey);
     byte *getMasterKey();
     void getNFCIDi(byte* nfcid3i);
+    byte* getRemoteNFCIDi();
     void setNFCIDi(const byte* nfcid3i, byte length);
     bool setRemotePublicKey(const byte* key);
     void setInitiator(bool bIsInitiator);

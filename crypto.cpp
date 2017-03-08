@@ -64,6 +64,11 @@ void NfcSec01::getNFCIDi(byte* nfcid3i)
     memcpy(nfcid3i, _localNFCID3, NFCID_SIZE);
 }
 
+byte* NfcSec01::getRemoteNFCIDi()
+{
+    return _remoteNFCID3;
+}
+
 
 void NfcSec01::setNFCIDi(const byte* nfcid3i, byte length)
 {

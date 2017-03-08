@@ -162,6 +162,12 @@ byte *EcdhComm::getMasterKey()
     return _nfcsec.getMasterKey();
 }
 
+byte* EcdhComm::getRemoteId()
+{
+    return _nfcsec.getRemoteNFCIDi();
+}
+
+
 // TAG | MACTAG
 bool EcdhComm::sendMacTag(bool isInitiator)
 {
