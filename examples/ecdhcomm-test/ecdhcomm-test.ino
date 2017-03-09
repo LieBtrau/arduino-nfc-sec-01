@@ -23,6 +23,7 @@ EcdhComm ecdh2= EcdhComm(&RNG, writeData2, readData2);
 void setup() {
     // put your setup code here, to run once:
     Serial.begin(9600);
+    while(!Serial);
     Serial.println("start");
     if(!ecdh1.init(id1, IDLENGTH))
     {

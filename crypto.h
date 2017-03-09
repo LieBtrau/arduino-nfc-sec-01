@@ -2,7 +2,7 @@
 #define CRYPTO_H
 #include "Arduino.h"
 #include <uECC.h>
-#include "cmac.h"
+#include "aes-cbc-cmac.h"
 
 class NfcSec01
 {

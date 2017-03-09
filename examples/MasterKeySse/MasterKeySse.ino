@@ -8,6 +8,7 @@ bool testMasterKeySse();
 void setup() {
   // put your setup code here, to run once:
   Serial.begin(9600);
+  while(!Serial);
   if(testMasterKeySse()){
     Serial.println("Pairing successful");
   }
@@ -52,13 +53,11 @@ bool testMasterKeySse() {
   byte publicA[unitA.getPublicKeySize()];
   byte nonceA[unitA.getNonceSize()];
   byte NFCID3_A[NfcSec01::NFCID_SIZE];
-  byte MKsseA[unitA.getMasterKeySize()];
   byte macTagA[unitA.getMacTagSize()];
 
   byte publicB[unitB.getPublicKeySize()];
   byte nonceB[unitB.getNonceSize()];
   byte NFCID3_B[NfcSec01::NFCID_SIZE];
-  byte MKsseB[unitB.getMasterKeySize()];
   byte macTagB[unitB.getMacTagSize()];
 
 
@@ -99,8 +98,7 @@ bool testMasterKeySse() {
     Serial.println("Can't calculate master keyA");
     return false;
   }
-  unitA.getMasterKey(MKsseA);
-  printBuffer("MKsseA", MKsseA, unitA.getMasterKeySize());
+  printBuffer("MKsseA", unitA.getMasterKey(), unitA.getMasterKeySize());
 
   //Generate master key on unit B:
   unitB.setRemotePublicKey(publicA);
@@ -108,10 +106,9 @@ bool testMasterKeySse() {
     Serial.println("Can't calculate master keyB");
     return false;
   }
-  unitB.getMasterKey(MKsseB);
-  printBuffer("MKsseB", MKsseB, unitB.getMasterKeySize());
+  printBuffer("MKsseB", unitB.getMasterKey(), unitB.getMasterKeySize());
 
-  if(memcmp(MKsseA,MKsseB,unitA.getMasterKeySize())!=0){
+  if(memcmp(unitA.getMasterKey(),unitB.getMasterKey(),unitA.getMasterKeySize())!=0){
     Serial.println("Master keys are not equal");
     return false;
   }
