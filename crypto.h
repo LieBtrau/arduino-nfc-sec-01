@@ -33,18 +33,10 @@ public:
     bool testMasterKeySse();
     void testCmac();
     static const byte NFCID_SIZE=10;
+    static const byte NONCE_LENGTH=8;
     static const byte _96BIT_ = 12;
     static const byte _128BIT_ = 16;
     static const byte _192BIT_ = 24;
-    typedef enum
-    {
-        QA,
-        QB,
-        NA,
-        NB,
-        MAC_TAG_A,
-        MAC_TAG_B
-    }MSG_ID;
 private:
     void generateKeyConfirmationTag(byte* KeyConfirmationTag, bool bIsLocal);
     byte _localPrivateKey[_192BIT_];

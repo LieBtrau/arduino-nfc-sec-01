@@ -51,7 +51,6 @@ private:
     bool sendMacTag(bool isInitiator);
     bool parseMacTag(bool isInitiator);
     void setLocalId(const byte* localId, byte idLength);
-    static const byte NONCE_LENGTH=8;
     static const byte MAX_MESSAGE_LEN=60; //maximum length for RH_SERIAL
     RNG_Function _rng_function;
     TX_Function _txfunc;

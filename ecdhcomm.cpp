@@ -19,13 +19,16 @@ EcdhComm::~EcdhComm()
 
 bool EcdhComm::init(const byte* localId, byte idLength)
 {
-    _messageBuffer=(byte*)malloc(MAX_MESSAGE_LEN);
     if(!_messageBuffer)
     {
+        _messageBuffer=(byte*)malloc(MAX_MESSAGE_LEN);
+        if(!_messageBuffer)
+        {
 #ifdef DEBUG
-        Serial.println("Can't init.");
-        return false;
+            Serial.println("Can't init.");
+            return false;
 #endif
+        }
     }
     setLocalId(localId, idLength);
     if(!_nfcsec.generateAsymmetricKey(_rng_function))
@@ -130,6 +133,9 @@ bool EcdhComm::startPairing()
     }
     _state=WAITING_FOR_PUBKEY_B;
     _commTimeOut=millis();
+#ifdef DEBUG
+        Serial.println("Pubkey sent");
+#endif
     return true;
 }
 
@@ -154,6 +160,9 @@ bool EcdhComm::parseMacTag(bool isInitiator)
         Serial.println("Key confirmation check failed");
 #endif
     }
+#ifdef DEBUG
+        Serial.println("Mactag parsed");
+#endif
     return bResult;
 }
 
@@ -180,6 +189,9 @@ bool EcdhComm::sendMacTag(bool isInitiator)
 #endif
         return false;
     }
+#ifdef DEBUG
+        Serial.println("Mactag sent");
+#endif
     return true;
 }
 
@@ -205,6 +217,9 @@ bool EcdhComm::sendNonce(bool isInitiator)
 #endif
         return false;
     }
+#ifdef DEBUG
+        Serial.println("Nonce sent");
+#endif
     return true;
 }
 
@@ -228,6 +243,9 @@ bool EcdhComm::parseNonce(bool isInitiator)
         Serial.println("calcMasterKeySSE failed");
 #endif
     }
+#ifdef DEBUG
+        Serial.println("Nonce parsed");
+#endif
     return bResult;
 }
 
@@ -245,6 +263,9 @@ bool EcdhComm::sendPubKey(bool isInitiator)
 #endif
         return false;
     }
+#ifdef DEBUG
+        Serial.println("Pubkey sent");
+#endif
     return true;
 }
 
@@ -258,6 +279,9 @@ bool EcdhComm::parsePubKey(bool isInitiator)
         return false;
     }
     _nfcsec.setRemotePublicKey(_messageBuffer+1);
+#ifdef DEBUG
+        Serial.println("Pubkey parsed.");
+#endif
     return true;
 }
 
